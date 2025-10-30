@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "id": "llama-3.1-8b-instant",
+      "object": "model",
+      "created": 1720635331,
+      "owned_by": "meta-llama"
+    },
+    {
+      "id": "llama-3.3-70b-versatile",
+      "object": "model",
+      "created": 1720635331,
+      "owned_by": "meta-llama"
+    },
+    {
+      "id": "meta-llama/llama-guard-4-12b",
+      "object": "model",
+      "created": 1704395383,
+      "owned_by": "meta-llama"
+    },
+    {
+      "id": "qwen/qwen3-32b",
+      "object": "model",
+      "created": 1718320214,
+      "owned_by": "Alibaba"
+    }
+  ]
+}

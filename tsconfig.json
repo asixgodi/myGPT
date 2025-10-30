@@ -1,0 +1,46 @@
+// 告诉 TypeScript 编译器（以及你的代码编辑器，如 VS Code）哪些文件是项目的一部分，需要被检查和编译。
+// 规定了 TypeScript 代码应该如何被检查和转换成 JavaScript。
+{
+  // 项目包含哪些文件
+  "include": [
+    "env.d.ts",
+    "src/**/*",
+    "src/**/*.vue",
+    "shims/**/*.d.ts"
+  ],
+  // 编译器的配置选项
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "strict": true,
+    "jsx": "preserve",
+    "verbatimModuleSyntax": true,
+    "types": [
+      "node",
+      "element-plus/global"
+    ],
+    "baseUrl": ".",
+    "allowJs": true,
+    // 用于开发时
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "outDir": "./dist",
+    "ignoreDeprecations": "5.0"
+  },
+  "references": [
+    // 专门用于配置构建工具本身（如 vite.config.ts）的 tsconfig 文件
+    {
+      "path": "./tsconfig.config.json"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+/* 注入一套基础的、经过重置的、跨浏览器一致的 HTML 元素样式。 */
+@tailwind base;
+/* 注入一套可复用的组件样式。 */
+@tailwind components;
+/* 注入一套工具类样式。 */
+@tailwind utilities;

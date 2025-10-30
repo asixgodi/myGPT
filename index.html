@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta charset='UTF-8' />
+  <link rel='icon' href='/favicon.ico' />
+  <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+  <title>LLM-conversation</title>
+  <base href='/' />
+  <!-- 社交媒体元标签 -->
+  <meta property='og:title' content='快速部署ChatGPT聊天应用 | LLM-conversation' />
+  <meta property='og:description' content='使用LLM-conversation快速部署你的ChatGPT聊天客户端，享受智能化的聊天体验。' />
+  <meta property='og:type' content='website' />
+  <!-- Twitter Card数据 -->
+  <meta name='twitter:title' content='快速部署ChatGPT聊天应用 | LLM-conversation' />
+  <meta name='twitter:description' content='使用LLM-conversation快速部署你的ChatGPT聊天客户端，享受智能化的聊天体验。' />
+</head>
+
+<body>
+  <div id='app'></div>
+  <script type='module' src='/src/main.ts'></script>
+  <script id='MathJax-script' defer src='/cdn.jsdelivr.net_npm_mathjax@3_es5_tex-mml-chtml.js'></script>
+  <script>
+    // 加载并配置 MathJax 库
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: {
+        fontCache: 'global',
+        scale: 110,
+        minScale: 80
+      },
+      options: {
+        renderActions: {
+          findScript: [10, function (doc) {
+            for (const node of document.querySelectorAll('span.math, div.math')) {
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], node)
+              const text = document.createTextNode('')
+              node.parentNode.replaceChild(text, node)
+              math.start = { node: text, delim: '', n: 0 }
+              math.end = { node: text, delim: '', n: 0 }
+              doc.math.push(math)
+            }
+          }, '']
+        }
+      }
+    }
+  </script>
+</body>
+
+</html>
