@@ -3,7 +3,8 @@
 import type { ChatMessage } from '@/types'
 import { Service, UserFilled } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
-import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
+import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import MessageRenderer from './MessageRenderer.vue'
 interface Props {
   messages: ChatMessage[]
@@ -14,35 +15,55 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const chatListDom = ref<HTMLDivElement>()
+const scrollerRef = ref()
 const showScrollButton = ref(false)
 
-const handleScroll = () => {
-  if (!chatListDom.value) return
+//预处理消息 虚拟滚动需要传入一个数组、并且每个消息需要一个唯一的ID
+const processedMessages = computed(() => {
+  return props.messages.filter((v) => v.role !== 'system').map((item, index) => {
+    // 保持 _vid 稳定，不包含 content.length
+    return {
+      ...item,
+      _vid: `${index}-${item.role}`
+    }
+  })
+})
+
+const handleScroll = (event:Event,scrollListener:any) => {
+  const target = event.target as HTMLElement
+  if (!target) return
   // scrollTop是当前滚动条的位置，scrollHeight是整个内容的总高度 ，clientHeight可视区域的高度
-  const { scrollTop, scrollHeight, clientHeight } = chatListDom.value
+  const { scrollTop, scrollHeight, clientHeight } = target
   // 当滚动条底部距离超过200px时，显示返回顶部按钮，scrollTop + clientHeight是我可见区域的底部
   showScrollButton.value = scrollHeight - (scrollTop + clientHeight) > 200
 }
 
 // Scroll to bottom
-const scrollToBottom = (isSmooth: boolean = false) => {
-  if (!chatListDom.value) return
-  chatListDom.value.scrollTo({
-    // 这里的top的含义：元素内容区域的顶部应该被滚动到距离其容器顶部多远的位置
-    top: chatListDom.value.scrollHeight,
-    behavior: isSmooth ? 'smooth' : 'auto'
-  })
+const scrollToBottom = () => {
+  if (!scrollerRef.value) return
+  scrollerRef.value.scrollToBottom()
   showScrollButton.value = false
 }
 
-onMounted(() => {
-  chatListDom.value?.addEventListener('scroll', handleScroll)
-})
+// onMounted(() => {
+//   chatListDom.value?.addEventListener('scroll', handleScroll)
+// })
 
-onUnmounted(() => {
-  chatListDom.value?.removeEventListener('scroll', handleScroll)
-})
+// onUnmounted(() => {
+//   chatListDom.value?.removeEventListener('scroll', handleScroll)
+// })
+
+// 监听消息变化自动滚动
+watch(
+  () => props.messages.length,
+  () => {
+    // 只有当用户原本就在底部，或者正在对话时，才自动滚动
+    // 这里简单处理：有新消息就滚到底部
+    nextTick(() => {
+      scrollToBottom()
+    })
+  }
+)
 
 // Cache markedRender results
 // const getRenderedContent = computed(() => (content: string) => {
@@ -62,57 +83,85 @@ onUnmounted(() => {
 // )
 
 defineExpose({
-  chatListDom,
+  scrollerRef,
   scrollToBottom
 })
 </script>
 
-<!-- 这里v-memo表示，只有当内容或角色变化时，才会重新渲染消息，如果都没变，会复用之前的DOM，避免不必要的渲染 -->
-<!-- 结合v-for使用. v-memo可以直接作用于 v-for的循环项上，为​​每个循环项​​单独提供记忆化策略。这里对于遍历出来的每个item,vue会对比v-memo,如果变化了,就重新渲染该节点-->
+
 <template>
   <div class="outer-container h-full" id="chat-message-container">
-    <div class="chat-container h-full overflow-y-auto" :class="{ mobile: isMobile, desktop: !isMobile }" ref="chatListDom">
-      <div v-for="item of messages.filter((v) => v.role !== 'system')" :key="item.content" v-memo="[item.content, item.role]">
-        <!-- 实现消息左右两边排列 flex-row-reverse -->
-        <div class="message-wrapper" :class="{ 'flex-row-reverse': item.role === 'user' }">
-          <!-- 头像 -->
-          <div class="avatar-wrapper" :class="{ 'mobile-avatar': isMobile }">
-            <ElIcon :size="isMobile ? 16 : 20" color="#000000">
-              <UserFilled v-if="item.role === 'user'" />
-              <Service v-else />
-            </ElIcon>
+    <!-- 
+      为什么这里有插槽呢，我当前组件（父组件），将数据传给我的子组件DynamicScroller，然后循环是在子组件里面做的，
+      然后子组件通过slot将每一项的数据回传给当前组件，由当前组件来决定每一项的样式。 
+     -->
+    <DynamicScroller
+      ref="scrollerRef"
+      class="chat-container h-full overflow-y-auto"
+      :class="{ mobile: isMobile, desktop: !isMobile }"
+      :items="processedMessages"               
+      :min-item-size="40"
+      key-field="_vid"
+      @scroll="handleScroll"
+    >
+      <!-- 默认插槽，解构出 item, index, active -->
+      <template #default="{ item, index, active }">
+        <!-- 
+          DynamicScrollerItem 是必须的包裹层 
+          :item="item" :active="active" :size-dependencies="[item.content]"
+          size-dependencies: 当这数组里的内容变化时，通知 scroller 重新计算该项高度
+        -->
+        <DynamicScrollerItem
+          :item="item"
+          :active="active"
+          :size-dependencies="[item.content]"
+          :data-index="index"
+        >
+          <div class="message-wrapper" :class="{ 'flex-row-reverse': item.role === 'user' }">
+            <!-- 头像 -->
+            <div class="avatar-wrapper" :class="{ 'mobile-avatar': isMobile }">
+              <ElIcon :size="isMobile ? 16 : 20" color="#000000">
+                <UserFilled v-if="item.role === 'user'" />
+                <Service v-else />
+              </ElIcon>
+            </div>
+            <!-- 消息内容 -->
+            <div class="message-content px-6 py-4" :class="[item.role, { 'mobile-message px-2': isMobile }]">
+              <!-- 注意：这里不需要 v-memo 了，虚拟滚动本身就会回收销毁不可见的组件 -->
+              <MessageRenderer 
+                :message="item" 
+                :is-last="index === processedMessages.length - 1" 
+                :is-talking="isTalking" 
+                @scroll-to-bottom="scrollToBottom"
+              />
+            </div>
           </div>
-          <!-- 消息内容 -->
-          <div class="message-content px-6 py-4" :class="[item.role, { 'mobile-message px-2': isMobile }]">
-            <!-- <div class="break-words text-base" v-show="item.content" v-html="getRenderedContent(item.content)"></div>
-            <Loading v-show="!item.content" /> -->
-            <MessageRenderer :message="item" :is-last="messages[messages.length - 1] === item" :is-talking="isTalking" @scroll-to-bottom = "scrollToBottom"/>
-          </div>
-        </div>
-      </div>
+        </DynamicScrollerItem>
+      </template>
+    </DynamicScroller>
 
       <!-- Scroll to bottom button -->
       <Transition name="fade">
-        <div v-if="showScrollButton" class="fixed right-6 bottom-32 cursor-pointer bg-black rounded-full shadow-lg hover:bg-opacity-80 transition-all" :class="{ 'right-3 bottom-24 opacity-50': isMobile }" @click="scrollToBottom(true)">
+        <div v-if="showScrollButton" class="fixed right-6 bottom-32 cursor-pointer bg-black rounded-full shadow-lg hover:bg-opacity-80 transition-all" :class="{ 'right-3 bottom-24 opacity-50': isMobile }" @click="scrollToBottom()">
           <div class="bg-black rounded-full p-2">
             <img src="../../../assets/3.svg" alt="ReturnToBottom" class="w-5 h-5" />
           </div>
         </div>
       </Transition>
     </div>
-  </div>
 </template>
 
 <style scoped>
+.vue-virtual-scroller {
+  height: 100%; 
+  overflow-y: auto; 
+}
 .outer-container {
   width: 100%;
   height: 100%;
   padding: 0;
 }
 
-.chat-container {
-  padding: 10px 16px;
-}
 
 .chat-container.mobile {
   padding-bottom: 20px;
@@ -133,8 +182,8 @@ defineExpose({
 }
 
 .message-wrapper {
+  padding: 10px 16px;
   display: flex;
-  margin-bottom: 16px;
   gap: 8px;
   align-items: flex-start;
 }

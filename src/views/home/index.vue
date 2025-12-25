@@ -242,7 +242,7 @@ onMounted(() => {
       ref="sidebarRef"
       :show-sidebar="showSidebar"
       @close-sidebar="showSidebar = false"
-      
+      class="transition-transform duration-300 ease-in-out"
     />
     
     <!-- 主内容区 -->

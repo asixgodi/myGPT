@@ -44,10 +44,13 @@ const finalHtml = computed(() => {
 
 
 // 无法在这个子组件定义一个scrollToBottom，是因为，滚动条在ChatContent那里才存在，当前组件是没有的
-watch(finalHtml,()=>{
-  nextTick(()=>{
-    emit('scrollToBottom')
-  })
+watch(finalHtml, () => {
+  // 只有在打字模式下，内容变化才需要自动滚动
+  if (renderMode.value === 'typing') {
+    nextTick(() => {
+      emit('scrollToBottom')
+    })
+  }
 })
 
 // 3.

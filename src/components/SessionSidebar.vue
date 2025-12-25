@@ -1,8 +1,11 @@
 <template>
   <div 
-    class="w-72 h-[calc(100vh-4rem)] flex flex-col fixed left-0 z-40 top-16 bg-gray-50 border-r-2 border-gray-200 transition-transform duration-500 ease-in-out" 
-    :class="{ 'hidden': !showSidebar,'top-16 z-40 h-[calc(100vh-4rem)]':isMobile }"
-    v-show="showSidebar || !isMobile"
+    class="w-72 h-[calc(100vh-4rem)] flex flex-col fixed left-0 z-40 top-16 bg-gray-50 border-r-2 border-gray-200 transition-transform duration-300 ease-in-out" 
+    :class="{ 
+      '-translate-x-full': !showSidebar,
+      'translate-x-0': showSidebar,
+      'top-16 z-40 h-[calc(100vh-4rem)]': isMobile 
+    }"
   >
     <!-- 头部 -->
     <div class="p-4 border-b border-gray-200 bg-white">
