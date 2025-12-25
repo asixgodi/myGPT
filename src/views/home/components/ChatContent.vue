@@ -90,7 +90,7 @@ defineExpose({
 
 
 <template>
-  <div class="outer-container h-full" id="chat-message-container">
+  <div class="outer-container h-full" id="chat-message-container">gi
     <!-- 
       为什么这里有插槽呢，我当前组件（父组件），将数据传给我的子组件DynamicScroller，然后循环是在子组件里面做的，
       然后子组件通过slot将每一项的数据回传给当前组件，由当前组件来决定每一项的样式。 
