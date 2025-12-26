@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, watch, ref } from 'vue' 
+import { computed, watch, ref, nextTick } from 'vue' 
 import { useTypingEffect } from '@/hooks/useTypingEffect'
 import type { ChatMessage } from '@/types'
 import Loading from '@/components/Loding.vue'
@@ -9,6 +9,7 @@ interface Props {
   message: ChatMessage
   isLast: boolean
   isTalking: boolean
+  stopTyping: boolean
 }
 const props = defineProps<Props>()
 const emit = defineEmits(['scrollToBottom'])
@@ -21,7 +22,8 @@ const renderMode = ref<RenderMode>('done')
 
 // 1. 数据源和打字机 Hook 
 const sourceContent = computed(() => props.message.content)
-const { typeRef } = useTypingEffect(sourceContent, { speed: 30 })
+const typeEnble = computed(() => props.stopTyping)
+const { typeRef } = useTypingEffect(sourceContent, { speed: 30 },typeEnble)
 
 
 // 2. 最终要渲染的 HTML 
@@ -56,33 +58,49 @@ watch(finalHtml, () => {
 // 3.
 // 使用 watch 来控制 renderMode
 watch(
-  // 监听所有相关的 props
-  [() => props.isLast, () => props.isTalking, () => props.message.content],
-  ([isLast, isTalking, content], [prevIsLast, prevIsTalking, prevContent]) => {
-    
-    // 场景一：判断是否进入 Loading 状态
-    // 条件：是最后一条助手消息，AI准备说话，但还没有任何内容
-    if (isLast && props.message.role === 'assistant' && isTalking && !content) {
-      renderMode.value = 'loading'
-      return // 确定状态后，立即退出
-    }
-
-    // 场景二：判断是否进入 Typing 状态
-    // 条件：是最后一条助手消息，AI正在说话，并且【已经有了内容】
-    if (isLast && props.message.role === 'assistant' && isTalking && content) {
-      renderMode.value = 'typing'
+  // 监听所有相关的状态（包含 typeRef.length，用于判断“打字是否追平”）
+  [() => props.isLast, () => props.isTalking, () => props.message.role,() => props.stopTyping, () => props.message.content, () => typeRef.value.length],
+  ([isLast, isTalking, role, stopTyping, content, typedLen]) => {
+    // 只有“最后一条助手消息”才需要 loading/typing 状态，其他一律 done
+    if (!isLast || role !== 'assistant') {
+      renderMode.value = 'done'
       return
     }
-    
-    // 场景三：其他所有情况都应为 Done 状态
-    // (历史消息, 用户消息, AI说完话)
-    renderMode.value = 'done'
 
+    // 场景一：最后一条助手消息，AI准备说话但还没内容 -> loading
+    if (isTalking && !content) {
+      renderMode.value = 'loading'
+      return
+    }
+
+    if( stopTyping ){
+      renderMode.value = 'done'
+      return
+    }
+
+    // 场景二：有内容时进入 typing；请求结束后也要等打字追平再 done
+    if (content) {
+      const isCaughtUp = typedLen >= content.length
+      if (isTalking || !isCaughtUp) {
+        renderMode.value = 'typing'
+        return
+      }
+      renderMode.value = 'done'
+      return
+    }
+
+    renderMode.value = 'done'
   }, {
     immediate: true // 确保组件加载时立即执行一次，设置初始状态
   }
 )
+// onMounted(()=>{
+//   console.log('mount',props.message)
+// })
 
+// onUnmounted(()=>{
+//   console.log('unmount',props.message)
+// })
 </script>
 
 <template>

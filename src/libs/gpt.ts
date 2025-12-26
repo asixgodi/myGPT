@@ -2,7 +2,7 @@
 
 import type { ChatMessage } from '@/types'
 
-export async function chat(messageList: ChatMessage[], apiKey: string, GPT_VERSION: string) {
+export async function chat(messageList: ChatMessage[], apiKey: string, GPT_VERSION: string,signal?:AbortSignal) {
   try {
     // 发送请求
     const result = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -16,7 +16,8 @@ export async function chat(messageList: ChatMessage[], apiKey: string, GPT_VERSI
         // 服务器在接收到stream: true这个参数后，决定以SSE的格式返回数据流
         stream: true,
         messages: messageList
-      })
+      }),
+      signal
     })
 
     if (!result.ok) {

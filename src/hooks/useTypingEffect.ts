@@ -1,47 +1,82 @@
 import { ref, watch, type Ref } from 'vue'
 
-export function useTypingEffect(sourceRef: Ref<string>, options = { speed: 10 }) {
-    // 处理后的文本,每次追加一个字符时，每次修改 typeRef.value都会触发响应式更新,在MessageRenderer.vue中使用到typeRef时会触发响应式的更新
-    const typeRef = ref('')
-    let buffer = ''
-    let isTyping = false
+export function useTypingEffect(
+  sourceRef: Ref<string>,
+  options = { speed: 10 },
+  stopRef?: Ref<boolean>
+) {
+  const typeRef = ref('')
+  let buffer = ''
+  let isTyping = false
+  let timer: number | null = null
 
-    const startType = () => {
-        if (isTyping) return
-        isTyping = true
-        const type = () => {
-            if (buffer.length > 0) {
-                // 从buffer取出一个字符，添加到typeRef
-                typeRef.value += buffer.charAt(0)
-                // 将已取出的字符从buffer中移除
-                buffer = buffer.substring(1)
-                // 递归进行打字效果，异步非阻塞的循环
-                setTimeout(type, options.speed)
-            } else {
-                isTyping = false
-            }
-        }
-        type()
+  const stopNow = () => {
+    if (timer !== null) {
+      clearTimeout(timer)
+      timer = null
+    }
+    buffer = ''
+    isTyping = false
+  }
+
+  const startType = () => {
+    if (isTyping) return
+    isTyping = true
+
+    const type = () => {
+      if (stopRef?.value) {
+        stopNow()
+        return
+      }
+
+      if (buffer.length > 0) {
+        typeRef.value += buffer.charAt(0)
+        buffer = buffer.substring(1)
+        timer = window.setTimeout(type, options.speed)
+      } else {
+        isTyping = false
+        timer = null
+      }
     }
 
-    watch(sourceRef, (newVal, oldVal) => {
-        // 新问一个问题时，清空打字状态，不然会接着上一个问题打字
-        // 就是每当我发送一条新的问题的时候，都会触发这个逻辑，因为我前面的乐观更新当中传的是空字符串
-        if (newVal === '' && (oldVal && oldVal.length > 0)) {
-            typeRef.value = ''
-            buffer = newVal
-            return
-        }
+    type()
+  }
 
-        // 只截取新增的部分添加到缓冲区,从 typeRef.value.length的位置开始截取，直到字符串末尾​​
-        const newContent = newVal.substring(typeRef.value.length)
-        if (newContent) {
-            buffer += newContent
-            if (!isTyping) {
-                startType()
-            }
-        }
-    }, { immediate: true })
+  // Stop：立刻停住（清空 buffer + 清掉定时器）
+  if (stopRef) {
+    watch(stopRef, (stopped) => {
+      if (stopped) stopNow()
+    })
+  }
 
-    return { typeRef }
-} 
+  watch(
+    sourceRef,
+    (newVal, oldVal) => {
+      // 初始化挂载（刷新/加载历史消息）：直接同步全文，不触发打字
+      if (oldVal === undefined) {
+        typeRef.value = newVal ?? ''
+        stopNow()
+        return
+      }
+
+      // Stop 后不再接收新内容
+      if (stopRef?.value) return
+
+      // 新问题开始（assistant 从 '' 开始）：清空状态
+      if (newVal === '' && oldVal && oldVal.length > 0) {
+        typeRef.value = ''
+        stopNow()
+        return
+      }
+
+      const newContent = (newVal ?? '').substring(typeRef.value.length)
+      if (newContent) {
+        buffer += newContent
+        if (!isTyping) startType()
+      }
+    },
+    { immediate: true }
+  )
+
+  return { typeRef, stopNow }
+}

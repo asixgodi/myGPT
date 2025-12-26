@@ -49,11 +49,13 @@ const GPT_V = ref('llama-3.3-70b-versatile')
 const isTalking = ref(false)
 const centerDialogVisible = ref(false)
 
+const abortController = ref<AbortController|null>(null)
+// 请求中断时，来控制打字机停止打字
+const stopTyping = ref(false)
 // Component References
 const chatContentRef = ref()
 const chatInputRef = ref()
 const sidebarRef = ref()
-
 // Sidebar State
 const showSidebar = ref(isMobile.value)
 
@@ -94,6 +96,11 @@ const checkMathJax = () => {
 
 
 const readStreamAndUpdateMessage = async (reader: ReadableStreamDefaultReader<Uint8Array>) => {
+  // 流式读取时如果 stopped，立刻停止消费
+  if(stopTyping.value){
+    try { await reader.cancel() } catch {}
+    return
+  }
   const { done, value } = await reader.read()
   if (done) {
     reader.releaseLock()
@@ -108,7 +115,7 @@ const readStreamAndUpdateMessage = async (reader: ReadableStreamDefaultReader<Ui
       const content = json.choices[0].delta.content ?? ''
       
       // 直接更新 store 中的最后一条消息
-      if (sessionStore.currentSession) {
+      if (!stopTyping.value && sessionStore.currentSession) {
         const lastMessage = sessionStore.currentSession.messages[sessionStore.currentSession.messages.length - 1]
         lastMessage.content += content
       }
@@ -126,8 +133,11 @@ const sendMessageToAssistant = async (content: string) => {
   }
   // 增加一个 isTalking 的检查，防止重复发送
   if (isTalking.value) return
-
+  stopTyping.value = false
   isTalking.value = true
+
+  // 创建一个取消请求的控制器
+  abortController.value = new AbortController()
 
   // 2. 准备要发送给 API 的消息列表 
   let messagesToSend = [...sessionStore.currentMessages]
@@ -141,7 +151,7 @@ const sendMessageToAssistant = async (content: string) => {
 
   try {
     // 使用处理过的 `messagesToSend` 发送请求
-    const response = await chat(messagesToSend, getKey(), GPT_V.value)
+    const response = await chat(messagesToSend, getKey(), GPT_V.value,abortController.value.signal)
 
     if (response.status === 'success' && response.data) {
       // 成功：开始读取流式数据
@@ -156,6 +166,11 @@ const sendMessageToAssistant = async (content: string) => {
       ElMessage({ message: errorMessage, type: 'error' })
     }
   } catch (error: any) {
+    if(error.name === 'AbortError'){
+      console.log("用户手动停止生成")
+      return
+    }
+
     // 请求本身发生了网络错误等异常
     const errorMessage = error.error?.message || error.message || 'Request failed, please try again'
     
@@ -181,7 +196,15 @@ const handleConfigClick = () => {
   centerDialogVisible.value = true
 }
 
-
+//中断请求
+const handleStop = ()=>{
+  stopTyping.value = true
+  if(abortController.value){
+    abortController.value.abort()
+  }
+  abortController.value = null
+  isTalking.value = false
+}
 
 const handleSaveSettings = (key: string, version: string) => {
   if (!key) {
@@ -249,9 +272,9 @@ onMounted(() => {
     <div class="main-content transition-all duration-300" :class="{ 'ml-0': !showSidebar || isMobile, 'ml-72': showSidebar && !isMobile }">
       <div class="chat-container pt-16 h-screen flex flex-col">
         <div class="flex-1 overflow-hidden" :class="{ 'mb-24': !isMobile, 'mb-10': isMobile }">
-          <ChatContent ref="chatContentRef" :messages="sessionStore.currentMessages" :role-alias="roleAlias" :is-mobile="isMobile" :is-talking="isTalking" />
+          <ChatContent ref="chatContentRef" :messages="sessionStore.currentMessages" :role-alias="roleAlias" :is-mobile="isMobile" :is-talking="isTalking" :stop-typing="stopTyping"/>
         </div>
-        <ChatInput ref="chatInputRef" :is-talking="isTalking" :is-mobile="isMobile" @send="sendMessageToAssistant"  :showSidebar="showSidebar" />
+        <ChatInput ref="chatInputRef" :is-talking="isTalking" :is-mobile="isMobile" @send="sendMessageToAssistant" :showSidebar="showSidebar" @stop-generate="handleStop"/>
       </div>
     </div>
   </div>

@@ -10,7 +10,8 @@ interface Props {
   messages: ChatMessage[]
   roleAlias: Record<string, string>
   isMobile: boolean
-  isTalking: boolean
+  isTalking: boolean,
+  stopTyping: boolean
 }
 
 const props = defineProps<Props>()
@@ -90,7 +91,7 @@ defineExpose({
 
 
 <template>
-  <div class="outer-container h-full" id="chat-message-container">gi
+  <div class="outer-container h-full" id="chat-message-container">
     <!-- 
       为什么这里有插槽呢，我当前组件（父组件），将数据传给我的子组件DynamicScroller，然后循环是在子组件里面做的，
       然后子组件通过slot将每一项的数据回传给当前组件，由当前组件来决定每一项的样式。 
@@ -127,12 +128,12 @@ defineExpose({
             </div>
             <!-- 消息内容 -->
             <div class="message-content px-6 py-4" :class="[item.role, { 'mobile-message px-2': isMobile }]">
-              <!-- 注意：这里不需要 v-memo 了，虚拟滚动本身就会回收销毁不可见的组件 -->
               <MessageRenderer 
                 :message="item" 
                 :is-last="index === processedMessages.length - 1" 
                 :is-talking="isTalking" 
                 @scroll-to-bottom="scrollToBottom"
+                :stop-typing="stopTyping"
               />
             </div>
           </div>

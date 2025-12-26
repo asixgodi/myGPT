@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { DeleteFilled } from '@element-plus/icons-vue'
-import { ElButton, ElInput } from 'element-plus'
+import { DeleteFilled, Promotion } from '@element-plus/icons-vue'
+import { ElButton, ElInput, ElIcon } from 'element-plus'
 import { ref } from 'vue'
-import { 
-  Promotion
-} from '@element-plus/icons-vue'
+
 interface Props {
   isTalking: boolean
   isMobile: boolean
@@ -13,7 +11,7 @@ interface Props {
 
 defineProps<Props>()
 
-const emit = defineEmits(['send', 'delete', 'scroll-bottom'])
+const emit = defineEmits(['send', 'delete', 'scroll-bottom','stop-generate'])
 
 const myInput = ref<HTMLInputElement | null>(null)
 const messageContent = ref('')
@@ -45,8 +43,15 @@ defineExpose({
   <div class="flex flex-nowrap fixed bottom-0 z-39 bg-gray-50 h-20 rounded-full border-1" :class="{ 'px-6': !isMobile, 'px-3 h-14': isMobile,'left-0 w-full':!showSidebar || isMobile,'left-72 right-0':showSidebar && !isMobile }">
     <div class="flex items-center w-full h-full" :class="{ 'max-w-3xl mx-auto': isMobile }">
       <el-input class="input flex-1 text-md " :rows="1" type="textarea" ref="myInput" v-model="messageContent" :size="isMobile ? 'default' : 'large'" :disabled="isTalking" @keydown.enter="handleSend"  />
-      <el-button @click="handleSend" :size="isMobile ? 'default' : 'large'" type="info" class="elBtnStyle ml-5" :class="{ 'text-5xl': !isMobile, 'text-3xl': isMobile }" :disabled="isTalking"> Send </el-button>
+      <div class="ml-4 flex items-center space-x-2 text-gray-900" :class="{ 'space-x-1': isMobile }">
+        <el-button type="info"  :size="isMobile ? 'default' : 'large'" @click="$emit('stop-generate')" v-if="isTalking">
+          <el-icon><DeleteFilled /></el-icon>
+        </el-button>
+        <el-button type="info" :size="isMobile ? 'default' : 'large'" @click="handleSend" v-else>
+          <el-icon><Promotion /></el-icon>
+        </el-button>
     </div>
+  </div>
   </div>
 </template>
 
@@ -59,5 +64,15 @@ defineExpose({
 .triangle img {
   width: 24px;
   height: 24px;
+}
+
+/* 强制覆盖 Element Plus 输入框内部样式 */
+:deep(.el-textarea__inner) {
+  color: #1f2937 !important; /* 使用深灰色 (Tailwind gray-800) */
+}
+/* 强制覆盖 Element Plus 按钮样式 (针对 type="info") */
+:deep(.el-button--info) {
+  color: #1f2937 !important; /* 深灰色文字 */
+  border-color: #e5e7eb !important;
 }
 </style>

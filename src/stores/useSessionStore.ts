@@ -65,9 +65,9 @@ export const useSessionStore = defineStore('session', () => {
     }
     // 更新当前会话消息列表
     async function updateCurrentMessages(messages: ChatMessage[]) {
-        console.log('🏪 Store: 开始更新当前会话消息')
-        console.log('🏪 Store: 消息数量:', messages.length)
-        console.log('🏪 Store: 当前会话ID:', currentSessionId.value)
+        // console.log('🏪 Store: 开始更新当前会话消息')
+        // console.log('🏪 Store: 消息数量:', messages.length)
+        // console.log('🏪 Store: 当前会话ID:', currentSessionId.value)
 
         await storage.updateCurrentSession(messages)
         // 只需要更新当前会话的数据即可，避免刷新整个列表

@@ -15,7 +15,7 @@ import c from 'highlight.js/lib/languages/c'
 import cpp from 'highlight.js/lib/languages/cpp'
 // 导入样式
 import 'highlight.js/styles/github.css'
-
+import DOMPurify from 'dompurify'
 import { marked, Renderer } from 'marked'
 
 const renderer = new Renderer()
@@ -60,5 +60,29 @@ marked.setOptions({ renderer })
 // marked负责遍历整个markdown文本,识别出不同的结构块(段落,代码..)
 // renderer是一个转换器,marked在遍历的过程中,每识别出一种解构,就调用renderer上相应的方法
 export const markedRender = (val: any) => {
-  return marked(val)
+  const dirtyHtml = marked(val)
+  const safeHtml = DOMPurify.sanitize(dirtyHtml, {
+    USE_PROFILES: { html: true },
+
+    // 你的项目需要“代码高亮 class / math class / Copy按钮 class”，class 一定要保留
+    ALLOWED_ATTR: [
+      'href',
+      'src',
+      'alt',
+      'title',
+      'class',
+      'target',
+      'rel',
+      'aria-label',
+      'role'
+    ],
+
+    // 你 renderer.code 里用到了 <button class='copyNode'>
+    ADD_TAGS: ['button'],
+
+    // 建议显式禁止一些高风险标签（按需）
+    FORBID_TAGS: ['style', 'iframe', 'object', 'embed']
+  })
+
+  return safeHtml
 }
