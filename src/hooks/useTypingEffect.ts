@@ -69,11 +69,23 @@ export function useTypingEffect(
         return
       }
 
-      const newContent = (newVal ?? '').substring(typeRef.value.length)
-      if (newContent) {
-        buffer += newContent
-        if (!isTyping) startType()
-      }
+      const full = newVal ?? ''
+
+    // 如果 source 变短/被重置，直接同步（避免出现负向截取导致的错乱）
+    if (full.length < typeRef.value.length) {
+      typeRef.value = full
+      stopNow()
+      return
+    }
+
+    // 关键：起点 = 已显示长度 + 已排队长度，避免重复入 buffer
+    const startIndex = typeRef.value.length + buffer.length
+    const newContent = full.substring(startIndex)
+
+    if (newContent) {
+      buffer += newContent
+      if (!isTyping) startType()
+    }
     },
     { immediate: true }
   )

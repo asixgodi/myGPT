@@ -59,7 +59,7 @@ export interface SessionInfo {
   lastMessage?: string
 }
 
-// 会话的数据结构，包含会话的创建信息和对话内容
+// 每创建一个会话，就会有一个对应的SessionData对象
 export interface SessionData {
   info: SessionInfo
   messages: ChatMessage[]

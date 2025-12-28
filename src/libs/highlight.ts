@@ -58,7 +58,7 @@ marked.setOptions({ renderer })
 
 // 使用marked库将markdown语法转换为html标签, AI返回的内容是markdown格式的
 // marked负责遍历整个markdown文本,识别出不同的结构块(段落,代码..)
-// renderer是一个转换器,marked在遍历的过程中,每识别出一种解构,就调用renderer上相应的方法
+// renderer是一个转换器,marked在遍历的过程中,每识别出一种结构,就调用renderer上相应的方法
 export const markedRender = (val: any) => {
   const dirtyHtml = marked(val)
   const safeHtml = DOMPurify.sanitize(dirtyHtml, {
